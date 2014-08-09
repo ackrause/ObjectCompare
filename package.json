@@ -1,0 +1,23 @@
+{
+  "name": "ObjectCompare",
+  "version": "0.0.0",
+  "description": "A node module for comparing two JSON objects and returning an array of their differences",
+  "main": "objCompare.js",
+  "dependencies": {
+    "canonical-json": "^0.0.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ackrause/ObjectCompare.git"
+  },
+  "author": "Andrew Krause",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ackrause/ObjectCompare/issues"
+  },
+  "homepage": "https://github.com/ackrause/ObjectCompare"
+}
