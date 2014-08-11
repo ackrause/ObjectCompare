@@ -12,7 +12,7 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
 
   // Check each key for deep equality.
   // If values at that key differ, save the key and two values
-  for (key in keySet) {
+  for (var key in keySet) {
     deepEquals(obj1[key], obj2[key], [key], changes, exactCompare);
   }
 
@@ -20,6 +20,7 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
 
   // HELPER FUNCTIONS
 
+  // get a set of the keys in two objects
   function getKeySet(obj1, obj2) {
     var keyArray = Object.keys(obj1).concat(Object.keys(obj2)),
         keySet = {};
@@ -29,6 +30,16 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
     }
 
     return keySet;
+  }
+
+  // converts undefined values into nulls, to signify that they were not present in one of the objects
+  function convertUndefinedToNull(arg) {
+    return typeof arg === 'undefined' ? null : arg;
+  }
+
+  // add changed values to changes array
+  function addToChanges(keys, before, after, changes) {
+    changes.push({key: keys.slice(), before: convertUndefinedToNull(before), after: convertUndefinedToNull(after)});
   }
 
   // Check if two arrays are deeply equal
@@ -45,49 +56,39 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
       for (var i = 0; i < obj1.length; i++) {
         keys.push(i);
         if (typeof obj1[i] !== typeof obj2[i]) {
-          changes.push({key: keys.slice(), before: obj1[i], after: obj2[i]});
+          addToChanges(keys, obj1[i], obj2[i], changes);
         } else if (Array.isArray(obj1[i]) && Array.isArray(obj2[i])) {
           deepEqualsArray(obj1[i], obj2[i], keys, changes, exactCompare);
         } else if ((!Array.isArray(obj1[i]) && Array.isArray(obj2[i])) ||
                    (Array.isArray(obj1[i]) && !Array.isArray(obj2[i]))) {
-          changes.push({key: keys.slice(), before: obj1[i], after: obj2[i]});
+          addToChanges(keys, obj1[i], obj2[i], changes);
         } 
         else if (typeof obj1[i] === 'object') {
           deepEqualsObject(obj1[i], obj2[i], keys, changes, exactCompare);
         } else if (obj1[i] !== obj2[i]) {
-          changes.push({key: keys.slice(), before: obj1[i], after: obj2[i]});
+          addToChanges(keys, obj1[i], obj2[i], changes);
         }
         keys.pop();
       }
     } else {
-      // create sets of hashed array contents
+      // create sets of the array contents
       var beforeSet = arrayToSet(obj1);
       var afterSet = arrayToSet(obj2);
 
-      // if a key exists in both, remove it from both
+      // if a key is in only one set, then it is a change
       var keySet = getKeySet(beforeSet, afterSet);
-      for (key in keySet) {
-        if(beforeSet[key] && afterSet[key]) {
-          delete beforeSet[key];
-          delete afterSet[key];
+      for (var key in keySet) {
+        if((beforeSet.hasOwnProperty(key) && !afterSet.hasOwnProperty(key)) || 
+           (!beforeSet.hasOwnProperty(key) && afterSet.hasOwnProperty(key))) {
+          addToChanges(keys, beforeSet[key], afterSet[key], changes);
         }
       }
-
-      // what remains are changes
-      for (key in beforeSet) {
-        changes.push({key: keys.slice(), before: beforeSet[key], after: null});
-      }
-      for (key in afterSet) {
-        changes.push({key: keys.slice(), before: null, after: afterSet[key]});
-      }
-
     }
 
     return;
   };
 
-  // Hash the contents of an array
-
+  // Create a set from the contents of an array
   function arrayToSet(arr) {
     if (!Array.isArray(arr)) {
       throw new Error('hashArray requires an array as input. Given: ', arr);
@@ -103,7 +104,6 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
         set[key] = arr[i];
       } 
     }
-
     return set;
   }
 
@@ -121,16 +121,16 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
     for (var key in keySet) {
       keys.push(key);
       if (typeof obj1[key] !== typeof obj2[key]) {
-        changes.push({key: keys.slice(), before: obj1[key], after: obj2[key]});
+        addToChanges(keys, obj1[key], obj2[key], changes);
       } else if (Array.isArray(obj1[key]) && Array.isArray(obj2[key])) {
         deepEqualsArray(obj1[key], obj2[key], keys, changes, exactCompare);
       } else if ((Array.isArray(obj1[key]) && !Array.isArray(obj2[key])) ||
                 (!Array.isArray(obj1[key]) && Array.isArray(obj2[key]))) {
-        changes.push({key: keys.slice(), before: obj1[key], after: obj2[key]});
+        addToChanges(keys, obj1[key], obj2[key], changes);
       } else if (typeof obj1[key] === 'object') {
         deepEqualsObject(obj1[key], obj2[key], keys, changes, exactCompare);
       } else if(obj1[key] !== obj2[key]) {
-        changes.push({key: keys.slice(), before: obj1[key], after: obj2[key]});
+        addToChanges(keys, obj1[key], obj2[key], changes);
       }
       keys.pop();
     }
@@ -139,13 +139,13 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
   };
 
   // Check if two values are deeply equal
-  function deepEquals(obj1, obj2, keys, changes, exactCompare) {
+  function deepEquals (obj1, obj2, keys, changes, exactCompare) {
     keys = keys || [];
     changes = changes || [];
     exactCompare = arguments.length < 5 ? true : !!exactCompare;
     
     if (typeof obj1 !== typeof obj2) {
-      changes.push({key: keys, before: obj1, after: obj2});
+      addToChanges(keys, obj1, obj2, changes);
       return;
     }
 
@@ -161,7 +161,7 @@ var objCompare = function objCompare(obj1, obj2, exactCompare) {
     }
     // compare two primitive types
     else if (obj1 !== obj2) {
-      changes.push({key: keys.slice(), before: obj1, after: obj2});
+      addToChanges(keys, obj1, obj2, changes);
       return;
     }
   };
